@@ -1,0 +1,125 @@
+#include <iostream>
+#include <ctime>
+#include <string>
+
+using namespace std;
+
+class DaysTime {
+private:
+	int t1;		//начальное время подготовки
+	int t2;		//конечное время подготовки
+
+public:
+	DaysTime() {
+		t1 = 0;
+		t2 = 0;
+	}
+
+	void SetTime(int t, int numberTime) {
+		switch (numberTime)
+		{
+		case 1:
+			this->t1 = t;
+		case 2:
+			this->t2 = t;
+		}
+	}
+
+	friend ostream& operator <<(ostream& stream, DaysTime obj) {
+		stream << obj.t1 << " - " << obj.t2;
+		return stream;
+	}
+
+	int GetTime() {
+		return t2 - t1;
+	}
+};
+
+DaysTime shedule[7];
+string week[7] = { "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье" };
+
+//Функция, осуществляющая ввод
+bool tryInput(string input, int& i, int numInput) {
+	int timeValue;
+
+	if (input == "N" || input == "n")	//Перейти к следующему дню недели
+		return 0;
+	else
+		if (input == "B" || input == "b" && i > 0)	//Вернуться к прошлому дню недели
+		{
+			i -= 2;
+			return 0;
+		}
+		else {
+			try								{ timeValue = stoi(input); }	//Попытка преобразовать ввод в число
+			catch (const std::exception&)	{ cout << "Ошибка ввода"; return 0; }	//Вывод ошибки (например, опечатались)
+
+			if (timeValue >= 0 || timeValue <= 24) {	//Проверка на диапазон 24 часов
+				shedule[i].SetTime(timeValue, numInput);
+				return 1;
+			}
+			else
+				cout << "Некорректный ввод времени!\n";
+		}
+}
+
+bool checkTime(int exist, int necessary) {
+	return exist >= necessary;	//Существующее время на подготовку больше необходимого
+}
+
+int main()
+{
+	setlocale(LC_ALL, "ru");
+	string input, input2;
+	int difficult, timeValue, timeBeforeExam, existTime = 0, minForTraining;
+	double weeksCounter;
+
+	cout << "Введите сложность экзамена (это могут быть билеты или количество заданий):\n";
+	cin >> difficult;
+	cout << "Введите количество дней до экзамена:\n";
+	cin >> timeBeforeExam;
+	cout << "\nВведите время, в которое вы могли бы заниматься(два числа)\n";
+	cout << "(N - next day, B - back day):\n";
+
+	//Цикл для ввода данных
+	for (int i = 0; i < 7 && i >= 0; i++)	
+	{
+		cout << week[i] << ": ";
+		cin >> input;
+		if (tryInput(input, i, 1)) {
+			cin >> input;
+			tryInput(input, i, 2);
+		}
+	}
+	cout << "\nСколько минут на подготовку к одной части экзамена из " << difficult << " вам нужно?\n";
+	cin >> minForTraining;
+
+	//Цикл для подсчета имеющегося времени
+	for (int i = 0; i < timeBeforeExam; i++)
+		existTime += shedule[i / 7].GetTime();
+	existTime *= 60;
+
+	//Вычисление необходимого количества выполнения в неделю билетов для экзамена:
+	weeksCounter = difficult / (timeBeforeExam - round(0.2 * timeBeforeExam)) * 7;
+	
+	//Проверка на осуществимость подготовки при заданных условиях
+	if (!checkTime(existTime, minForTraining * difficult)) {	
+		cout << "Недостаточно времени для того, чтобы подготовиться. Увеличьте его.";
+		return 0;
+	}
+
+	//Цикл вывода расписания
+	int j = 0;
+	for (int i = 0; i < 7 && j < weeksCounter; i++)
+	{
+		if (shedule[i].GetTime() != 0) {
+			cout << week[i] << ":\n";
+			cout << shedule[i] << endl;
+			j += shedule[i].GetTime();
+		}
+	}
+
+
+	return 0;
+}
+
