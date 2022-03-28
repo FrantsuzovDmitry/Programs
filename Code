@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ctime>
 #include <string>
+#include <fstream>
 
 using namespace std;
 
@@ -15,7 +16,18 @@ public:
 		t2 = 0;
 	}
 
+	DaysTime(const DaysTime& obj) {
+		this->t1 = obj.t1;
+		this->t2 = obj.t2;
+	}
+
 	void SetTime(int t, int numberTime) {
+
+		if (t < 0 || t > 24)
+		{
+			cout << "Ошибка задания времени (оно олжно быть 0 <= t <= 24)\n\n";
+			return;
+		}
 		switch (numberTime)
 		{
 		case 1:
@@ -25,13 +37,28 @@ public:
 		}
 	}
 
-	friend ostream& operator <<(ostream& stream, DaysTime obj) {
+	friend ostream& operator <<(ostream& stream, DaysTime& obj) {
 		stream << obj.t1 << " - " << obj.t2;
 		return stream;
 	}
 
+	friend string operator + (DaysTime& obj, int timeInMinutes) {
+		string output = to_string(obj.GetT1() + timeInMinutes / 60) + ":" + to_string(timeInMinutes % 60);
+		if (timeInMinutes % 60 == 0)
+			output += "0";
+		return output;
+	}
+
 	int GetTime() {
 		return t2 - t1;
+	}
+
+	int GetT1() {
+		return t1;
+	}
+
+	int GetT2() {
+		return t2;
 	}
 };
 
@@ -39,7 +66,7 @@ DaysTime shedule[7];
 string week[7] = { "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье" };
 
 //Функция, осуществляющая ввод
-bool tryInput(string input, int& i, int numInput) {
+bool TryInput(string input, int& i, int numInput) {
 	int timeValue;
 
 	if (input == "N" || input == "n")	//Перейти к следующему дню недели
@@ -51,75 +78,228 @@ bool tryInput(string input, int& i, int numInput) {
 			return 0;
 		}
 		else {
-			try								{ timeValue = stoi(input); }	//Попытка преобразовать ввод в число
-			catch (const std::exception&)	{ cout << "Ошибка ввода"; return 0; }	//Вывод ошибки (например, опечатались)
+			try { timeValue = stoi(input); }			//Попытка преобразовать ввод в число
+			catch (const std::exception&) { cout << "Ошибка ввода\n"; i--; return 0; }	//Вывод ошибки (например, опечатались)
 
-			if (timeValue >= 0 || timeValue <= 24) {	//Проверка на диапазон 24 часов
+			if (timeValue >= 0 && timeValue <= 24) {	//Проверка на диапазон 24 часов
 				shedule[i].SetTime(timeValue, numInput);
 				return 1;
 			}
 			else
+			{
 				cout << "Некорректный ввод времени!\n";
+				i--;
+				return 0;
+			}
 		}
 }
 
-bool checkTime(int exist, int necessary) {
-	return exist >= necessary;	//Существующее время на подготовку больше необходимого
+bool checkTime(long int existTime, int minutesForTraining, int difficult) {
+	long int necessaryTime = minutesForTraining * difficult;
+	return existTime * 0.8 >= necessaryTime;	//Существующее время на подготовку больше необходимого
 }
+
+//Функция для вычисления соотношения времени отдыха и времени подготовки к экзамену
+void CalculateTrainingTime(DaysTime shedule[], long int difficultPerWeek, int minutesForTraining, short int& trainingTime) {
+	DaysTime timeOfStart;
+	int time;		//Получаем количество минут на поготовку в n-ый день
+	int trainingTimeCount = 0;
+
+	//Цикл для подсчета оптимального соотношения отдыха и работы
+	while (1) {
+		trainingTimeCount = 0;
+		for (int i = 0; i < 7; i++)
+		{
+			timeOfStart = shedule[i];
+			time = timeOfStart.GetTime() * 60;		//Узнаем количество минут на подготовку в k-ый день
+			while (time > 0)
+			{
+				time -= trainingTime;					//Вычитаем из имеющегося времени время, которое отзанимались
+				trainingTimeCount += trainingTime;		//Засекаем времени, сколько занимались
+
+				time -= 60 - trainingTime;				//Отнимаем от общего времени время на отдых
+			}
+		}
+	
+		if (trainingTimeCount / minutesForTraining >= difficultPerWeek)
+			return ;		//Если мы в неделю выполняем больше задач, чем нужно, чтобы успеть до конца срока, то выходим из цикла
+		else if (trainingTime < 60) trainingTime += 5;	//Иначе меняем соотношение работы и отдыха
+	}
+}
+
+//Функция для вывода расписания
+void OutputShedulesDay(DaysTime timeOfStart, short int trainingTime) {
+
+	int time = timeOfStart.GetTime() * 60;	//Время на подготовку в конкретный день
+
+	if (time != 0)
+	{
+		int i = 0;
+		while (time > 0)
+		{
+			cout << "Занятие\t" << timeOfStart + (trainingTime * i + (60 - trainingTime) * i) << " - " << timeOfStart + (trainingTime * (i + 1) + (60 - trainingTime) * i) << endl;
+			time -= trainingTime;
+
+			if (trainingTime != 60) {
+				cout << "Отдых\t" << timeOfStart + (trainingTime * (i + 1) + (60 - trainingTime) * i) << " - " << timeOfStart + (trainingTime * (i + 1) + (60 - trainingTime) * (i + 1)) << endl;
+				time -= 60 - trainingTime;
+			}
+
+			i++;
+		}
+	}
+}
+
 
 int main()
 {
 	setlocale(LC_ALL, "ru");
-	string input, input2;
-	int difficult, timeValue, timeBeforeExam, existTime = 0, minForTraining;
-	double weeksCounter;
+	string input;
+	int difficult, daysBeforeExam, minutesForTraining;
+	long int difficultPerWeek, existTime = 0;
 
 	cout << "Введите сложность экзамена (это могут быть билеты или количество заданий):\n";
 	cin >> difficult;
+	//difficult = 32;
 	cout << "Введите количество дней до экзамена:\n";
-	cin >> timeBeforeExam;
+	cin >> daysBeforeExam;
+	//daysBeforeExam = 540;
 	cout << "\nВведите время, в которое вы могли бы заниматься(два числа)\n";
 	cout << "(N - next day, B - back day):\n";
-
+	
 	//Цикл для ввода данных
 	for (int i = 0; i < 7 && i >= 0; i++)	
 	{
 		cout << week[i] << ": ";
 		cin >> input;
-		if (tryInput(input, i, 1)) {
+		//input = "17";
+		if (TryInput(input, i, 1)) {
 			cin >> input;
-			tryInput(input, i, 2);
+			//input = "22";
+			TryInput(input, i, 2);
 		}
 	}
-	cout << "\nСколько минут на подготовку к одной части экзамена из " << difficult << " вам нужно?\n";
-	cin >> minForTraining;
+
+	while (1) {
+		cout << "\nСколько минут на подготовку к одной части экзамена из " << difficult << " частей вам нужно?\n";
+		cout << "Если часть слишком большая, нажмите N\n";
+		cin >> input;
+		if (input != "N")
+		{
+			try
+			{
+				minutesForTraining = stoi(input);
+			}
+			catch (const std::exception&)
+			{
+				cout << "Ошибка ввода";
+				input = "Error";
+			}
+
+			if (input != "Error")
+				break;
+		}
+		else
+		{
+			cout << "Сколько подзадач (например, вариантов задания) в каждой задаче? \n";
+			cin >> input;
+			while (1) {
+				try
+				{
+					difficult *= stoi(input);
+				}
+				catch (const std::exception&)
+				{
+					cout << "Ошибка ввода";
+					input = "Error";
+				}
+
+				if (input != "Error")
+					break;
+			}
+					}
+	}
 
 	//Цикл для подсчета имеющегося времени
-	for (int i = 0; i < timeBeforeExam; i++)
-		existTime += shedule[i / 7].GetTime();
+	for (int i = 0; i < daysBeforeExam; i++)
+		existTime += shedule[i % 7].GetTime();
 	existTime *= 60;
 
 	//Вычисление необходимого количества выполнения в неделю билетов для экзамена:
-	weeksCounter = difficult / (timeBeforeExam - round(0.2 * timeBeforeExam)) * 7;
-	
+	difficultPerWeek = round(difficult * 7 / (round(daysBeforeExam * 0.8)));
+
 	//Проверка на осуществимость подготовки при заданных условиях
-	if (!checkTime(existTime, minForTraining * difficult)) {	
-		cout << "Недостаточно времени для того, чтобы подготовиться. Увеличьте его.";
+	if (!checkTime(existTime, minutesForTraining, difficult)) {
+		cout << "\n\nНедостаточно времени для того, чтобы подготовиться. Увеличьте его.";
 		return 0;
 	}
 
 	//Цикл вывода расписания
-	int j = 0;
-	for (int i = 0; i < 7 && j < weeksCounter; i++)
+	short trainingTime = 30;	//Устанавливаю минимальное время чередования работы и отдыха
+	CalculateTrainingTime(shedule, difficultPerWeek, minutesForTraining, trainingTime);
+
+	cout << "\nРАСПИСАНИЕ:\n";
+	for (int i = 0; i < 7; i++)
 	{
-		if (shedule[i].GetTime() != 0) {
-			cout << week[i] << ":\n";
-			cout << shedule[i] << endl;
-			j += shedule[i].GetTime();
+		if (shedule[i].GetTime() != 0) 
+		{
+			cout << endl << week[i] << ":\n";
+			OutputShedulesDay(shedule[i], trainingTime);
 		}
 	}
 
+	if (trainingTime >= 45)	cout << "\nСовет: увеличьте время на подготовку.\n\n";
 
+	string path = "";
+	cout << "Введите место и название с расширением файла(txt), куда хотите сохранить расписание.\n";
+	cout << "Нажмите 'N', файл будет сохранен по умолчанию в папку с программой с названием 'Shedule.txt'\n";
+	cin >> path;
+	if (path == "N")
+		path = "Shedule.txt";
+	ofstream file;
+
+	try
+	{
+		file.open(path);
+	}
+	catch (const std::exception&)
+	{
+		cout << "Ошибка открытия файла\n";
+	}
+
+	file << "РАСПИСАНИЕ:\n";
+	for (int j = 0; j < 7; j++)
+	{
+		if (shedule[j].GetTime() != 0)
+		{
+			file << endl << week[j] << ":\n";
+			int time = shedule[j].GetTime() * 60;	//Время на подготовку в конкретный день
+
+			if (time != 0)
+			{
+				int i = 0;
+				while (time > 0)
+				{
+					file << "Занятие\t" << shedule[i] + (trainingTime * i + (60 - trainingTime) * i) << " - " << shedule[i] + (trainingTime * (i + 1) + (60 - trainingTime) * i) << endl;
+					time -= trainingTime;
+
+					if (trainingTime != 60)
+					{
+						file << "Отдых\t" << shedule[i] + (trainingTime * (i + 1) + (60 - trainingTime) * i) << " - " << shedule[i] + (trainingTime * (i + 1) + (60 - trainingTime) * (i + 1)) << endl;
+						time -= 60 - trainingTime;
+					}
+
+					i++;
+				}
+			}
+		}
+	}	
+
+	file.close();
+
+	cout << "\nРасписание сохранено в " << path;
+
+	cin >> input;
 	return 0;
 }
 
