@@ -2,14 +2,6 @@
 #include <math.h>
 using namespace std;
 
-//void InConsole(int x)
-//{
-//    for (int i = 0; i < 15; i++)
-//    {
-//        cout << ((x >> i) & 1);
-//    }
-//    cout << endl;
-//}
 
 int maximum = 100, minimum = -100;                            //Рассматриваемый интервал
 
@@ -215,61 +207,6 @@ Population Clone(Population& population, int populationSize)
     return newPop;
 }
 
-////Функция мутации для целочисленного кодирования
-//void MutationInt(Prim& individual, int P_Mutation)
-//{
-//    if (rand() % 100 < P_Mutation)                      //Мутация происходит с вероятностью P_Mutation
-//    {
-//        int value = individual.GetGenInt();
-//        double Pm = (double)rand() / RAND_MAX;          //Генерация случайного числа [0, 1]
-//        double P_MutationBit = 1.0 / 15;                //Каждый бит мутирует с такой вероятностью
-//        for (int i = 0; i < 15; i++)
-//            if (Pm < P_MutationBit)
-//                value = value ^ (1 << i);               //Исключающее ИЛИ с i-тым битом (инверсия бита) 
-//        individual.SetGen(Encode(value));               //Устанавливаем новое значение гена у особи 
-//    }
-//}
-
-/*
-//Функция одноточечного кроссинговера
-void Crossing(Prim& parent1, Prim& parent2)
-{
-    //short j = rand() % 13 + 1;              //генерирование случайной точки от 1 до 14 (т.к. крайние биты не могут быть точкой разбиения)
-    short j = 5;
-    Prim child1, child2;
-    int res1, res2;
-    int newGen1 = res1 = parent1.GetGenInt();
-    int newGen2 = res2 = parent2.GetGenInt();
-    int z = 0;
-    for (int i = 0; i < j; i++)
-    {
-        z = z | (res2 & (1 << i));       //Получаем значения первых j битов гена второго родителя с помощью логического побитового сложения
-    }
-    newGen1 = newGen1 >> j;             //Обнуляем крайние правые j битов
-    newGen1 = newGen1 << j;             
-    newGen1 = newGen1 | z;              //Вставляем вместо них полученные в цикле биты
-
-    
-    z = 0;
-    for (int i = j; i < 15; i++)
-    {
-        z = z | (res1 & (1 << i));       //Получаем значения [j, 15] битов гена первого родителя с помощью логического побитового сложения
-    }
-    //cout << "Z: "; InConsole(z);
-    newGen2 = newGen2 << (j);             //Обнуляем крайние левые j битов
-    newGen2 = newGen2 >> (j);             
-    newGen2 = newGen2 | z;              //Вставляем вместо них полученные в цикле биты
-    //cout << "GEN2: "; InConsole(newGen2);
-
-    child1.SetGen(Decode(newGen1)); 
-    child2.SetGen(Decode(newGen2));
-
-    parent1 = child1;
-    parent2 = child2;
-}
-*/
-
-
 int main()
 {
     setlocale(LC_ALL, "ru");
@@ -302,17 +239,6 @@ int main()
 
 
     Population offspring(populationSize);                       //Промежуточная переменная
-
-    ////InConsole(5);
-    //Prim P1, P2;
-    //P1.SetGen((rand() % (maximum - minimum + 1)) - ((maximum - minimum) / 2));
-    //P2.SetGen((rand() % (maximum - minimum + 1)) - ((maximum - minimum) / 2));
-    //P1.OutputGenInConsole();
-    //P2.OutputGenInConsole();
-    //cout << endl << endl;
-    //Crossing(P1, P2);
-    //P1.OutputGenInConsole();
-    //P2.OutputGenInConsole();
     
     //Собственно генетический алгоритм для ВЕЩЕСТВЕННОГО КОДИРОВАНИЯ
     cout << "ВЕЩЕСТВЕННОЕ КОДИРОВАНИЕ:\n";
@@ -325,7 +251,7 @@ int main()
         //Цикл скрещивания
         for (int i = 0; i < populationSize / 2; i++)
         {
-            if (rand() % 100 < P_Crossing)                                      //Скрещивание происходит с вероятностью 90%
+            if (rand() % 100 < P_Crossing)                                            //Скрещивание происходит с вероятностью 90%
                 ArithmeticCrossing(offspring[i], offspring[populationSize - i]);      //Скрещивается i с n-i особью, где n- размер популяции
         }
         if (populationSize % 2 == 1)        //Если кол-во особей нечётно, оставшаяся особь скрещивается со случайной
@@ -369,53 +295,6 @@ int main()
     {
         cout << i + 1 << "; " << meanValues[i] << ";" << endl;
     }
-    
-
-    /*
-    //Собственно генетический алгоритм для ЦЕЛОЧИСЛЕННОГО КОДИРОВАНИЯ
-    cout << "ЦЕЛОЧИСЛЕННОЕ КОДИРОВАНИЕ:\n";
-
-    for (int k = 0; k < populationSize; k++)
-        population[k].OutputGenInConsole();
-    cout << endl << endl;
-
-    for (int i = 1; i < maxGeneration/10; i++)
-    {
-        for (int k = 0; k < populationSize; k++)
-            population[k].OutputGenInConsole();
-        cout << endl << endl;
-
-        TournamentSelection(population, populationSize, offspring);
-        offspring = Clone(offspring, populationSize);
-
-        //Цикл скрещивания
-        for (int i = 0; i < populationSize / 2; i++)
-        {
-            if (rand() % 100 < P_Crossing)                                      //Скрещивание происходит с вероятностью 90%
-                Crossing(offspring[i], offspring[populationSize - i]);         //Скрещивается i с n-i особью, где n- размер популяции
-        }
-
-        //Цикл мутаций
-        for (int i = 0; i < populationSize; i++)
-        {
-            MutationInt(offspring[i], P_Mutation);
-        }
-        population = offspring;
-        bestFitnessValues[generationCounter] = population.FindBest();
-        meanFitnessValues[generationCounter] = population.CalculateFitnessPopulation();
-    }
-
-    cout << "BEST:\n";
-    for (int i = 0; i < 50; i++)
-    {
-        cout << i + 1 << "; " << bestFitnessValues[i] << ";" << endl;
-    }
-    cout << "\n\nMEAN:\n";
-    for (int i = 0; i < 50; i++)
-    {
-        cout << i + 1 << "; " << meanFitnessValues[i] << ";" << endl;
-    }
-    */
 
     return 0;
 }
