@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 def sigm(t):                        #сигмоида
   return 1 / (1 + np.exp(-t))
 
@@ -14,8 +15,10 @@ def y_to_vector(y):                 #перевод ответа в бинарн
 x = np.array([[1, 1, 0], [1, 0, 1], [0, 1, 1], [0, 1, 0], [0, 1, 1], [0, 0, 1], [0, 1, 0], [1, 1, 1], [0, 0, 0]])
 y = np.array([1, 1, 2, 3, 2, 3, 3, 1, 2])
 
-lr = 0.25                   #скорость обучения
+lr = 0.25                  #скорость обучения
 number_epochs = 1000
+xi = []
+yi = []
 w1 = np.random.rand(3, 3)   #веса первого слоя
 b1 = np.random.rand(1, 3)   #смещения первого слоя 
 
@@ -47,7 +50,7 @@ for epoch in range(number_epochs):
   w2 = w2 - lr * de_dwout
   b2 = b2 - lr * de_dbout
 
-  
+  xi.append(epoch + 1)
   counter = 0
   for i in range(len(x)): 
     t1 = x[i] @ w1 + b1
@@ -56,7 +59,10 @@ for epoch in range(number_epochs):
     tout = h1 @ w2 + b2
     hout = sigm(tout)
     if np.argmax(hout) + 1 == y[i]: counter += 1      #подсчет верных выводов
-  if (epoch + 1) % 100 == 0: print('Точность на эпохе', (epoch + 1), ' = ', counter / 9)
+  yi.append(counter/9)
+  if (epoch + 1) % 100 == 0: 
+    print('Точность на эпохе', (epoch + 1), ' = ', counter / 9)
   if counter / 9 == 1.0: 
     print('Точность на эпохе', (epoch + 1), ' = ', counter / 9)
     break
+plt.plot(xi, yi)                                      #Вывод графика
